@@ -46,22 +46,31 @@ class TTSRequest(BaseModel):
     put_accent: bool = True
     put_yo: bool = True
 
+QUOTES = "\"'`“”„‟‘’‚«»"
+
+def clean(value: str) -> str:
+    # Умные кавычки и пробелы из полей интеграции HA ломают поиск модели в конфиге
+    return value.strip().strip(QUOTES).strip()
+
 @app.post("/tts")
 def generate_tts(req: TTSRequest):
     global tts_engine, current_model
+    model_id = clean(req.model_id)
+    language = clean(req.language)
+    voice = clean(req.voice)
     try:
-        if tts_engine is None or current_model != req.model_id:
-            print(f"Загрузка модели: {req.model_id}")
-            tts_engine = SileroTTS(model_id=req.model_id, language=req.language, speaker=req.voice)
-            current_model = req.model_id
-        
+        if tts_engine is None or current_model != model_id:
+            print(f"Загрузка модели: {model_id}")
+            tts_engine = SileroTTS(model_id=model_id, language=language, speaker=voice)
+            current_model = model_id
+
         tts_engine.put_accent = req.put_accent
         tts_engine.put_yo = req.put_yo
 
-        if getattr(tts_engine, 'language', '') != req.language:
-            tts_engine.change_language(req.language)
-        if getattr(tts_engine, 'speaker', '') != req.voice:
-            tts_engine.change_speaker(req.voice)
+        if getattr(tts_engine, 'language', '') != language:
+            tts_engine.change_language(language)
+        if getattr(tts_engine, 'speaker', '') != voice:
+            tts_engine.change_speaker(voice)
             
         if hasattr(tts_engine, 'change_sample_rate'):
             tts_engine.change_sample_rate(req.sample_rate)
@@ -69,7 +78,7 @@ def generate_tts(req: TTSRequest):
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             temp_path = tmp.name
             
-        print(f"Генерация: текст='{req.text}', голос={req.voice}")
+        print(f"Генерация: текст='{req.text}', голос={voice}")
         tts_engine.tts(req.text, temp_path)
         
         if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
@@ -82,6 +91,8 @@ def generate_tts(req: TTSRequest):
         print(f"Успех! Отправлено {len(audio)} байт.")
         return Response(content=audio, media_type="audio/wav")
 
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Неизвестная модель или язык: model_id={model_id!r}, language={language!r} (нет ключа {e})")
     except Exception as e:
         import traceback
         traceback.print_exc()
