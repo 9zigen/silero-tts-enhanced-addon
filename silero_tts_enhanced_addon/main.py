@@ -64,9 +64,9 @@ def refresh_models_config():
     except Exception as e:
         if os.path.exists(saved):
             shutil.copyfile(saved, live)
-            print(f"Список моделей не обновлён ({e}), используется сохранённая копия")
+            print(f"Список моделей не обновлён ({type(e).__name__}), используется сохранённая копия")
         else:
-            print(f"Внимание: список моделей не загружен ({e}), он понадобится при первом запросе")
+            print(f"Внимание: список моделей не загружен ({type(e).__name__}), он понадобится при первом запросе")
 
 
 refresh_models_config()
