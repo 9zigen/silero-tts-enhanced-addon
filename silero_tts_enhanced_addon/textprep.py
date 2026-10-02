@@ -18,6 +18,15 @@ def clean(value: str) -> str:
     return value.strip().strip(QUOTES).strip()
 
 
+LANGUAGE_ALIASES = {"uk": "ua"}  # украинский: uk в Home Assistant, ua у Silero
+
+
+def normalize_language(value: str) -> str:
+    # ru-RU, en_US, UK -> ru, en, ua
+    code = clean(value).replace("_", "-").split("-")[0].lower()
+    return LANGUAGE_ALIASES.get(code, code)
+
+
 def extract_ssml(text: str):
     # SSML может прийти в кавычках из message автоматизации: “<speak>...</speak>"
     candidate = clean(text)
