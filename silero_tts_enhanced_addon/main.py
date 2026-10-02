@@ -166,10 +166,24 @@ def status():
             "cached_models": [{"model_id": m, "language": l} for m, l in engines]}
 
 
+@app.get("/models")
+def list_models():
+    return SileroTTS.get_available_models()
+
+
+@app.get("/voices")
+def list_voices(model_id: str = "v5_ru", language: str = "ru"):
+    model_id = textprep.clean(model_id)
+    language = textprep.normalize_language(language)
+    with lock:
+        engine = get_engine(model_id, language)
+        return {"model_id": model_id, "language": language, "voices": list(engine.tts_model.speakers)}
+
+
 @app.post("/tts")
 def generate_tts(req: TTSRequest):
     model_id = textprep.clean(req.model_id)
-    language = textprep.clean(req.language)
+    language = textprep.normalize_language(req.language)
     voice = textprep.clean(req.voice)
     try:
         with lock:

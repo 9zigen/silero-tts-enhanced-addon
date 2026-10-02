@@ -19,6 +19,9 @@ The add-on downloads any model you request from the Integration on first use. An
 Most popular:
 * **Russian (ru):** `v5_5_ru` (voices: aidar, baya, kseniya, xenia, eugene), `v5_ru`
 * **English (en):** `v3_en` (voices: en_0, en_1 ... en_117, random)
+* **Ukrainian (ua):** `v4_ua` (voices: mykyta, random)
+
+Language codes: `ru`, `en`, `ua`. Home Assistant's `uk` and region forms like `ru-RU` or `en-US` are accepted too. For other tools: `GET /models` lists models per language, `GET /voices?model_id=v5_5_ru&language=ru` lists voices, `GET /status` shows what is loaded.
 
 ## ⚙️ Auto-accent and Ё switches
 The two checkboxes in the integration settings are sent as `put_accent` and `put_yo`, and can be overridden per call in `options`.
@@ -96,6 +99,9 @@ data:
 Самые популярные:
 * **Русский (ru):** `v5_5_ru` (голоса: aidar, baya, kseniya, xenia, eugene), `v5_ru`
 * **Английский (en):** `v3_en` (голоса: en_0, en_1 ... en_117, random)
+* **Украинский (ua):** `v4_ua` (голоса: mykyta, random)
+
+Коды языков: `ru`, `en`, `ua`. Принимаются также `uk` из Home Assistant и формы с регионом вроде `ru-RU` или `en-US`. Для других программ: `GET /models` — модели по языкам, `GET /voices?model_id=v5_5_ru&language=ru` — голоса, `GET /status` — что загружено.
 
 ## ⚙️ Переключатели автоударения и Ё
 Две галочки в настройках интеграции передаются как `put_accent` и `put_yo`, их можно переопределить для отдельного вызова в `options`.
