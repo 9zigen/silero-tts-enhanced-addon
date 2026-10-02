@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import shutil
 from fastapi import FastAPI, Response, HTTPException
@@ -31,6 +32,7 @@ except Exception as e:
 # ===========================================================================
 
 from silero_tts.silero_tts import SileroTTS
+from silero_tts.lang_data import lang_data
 
 app = FastAPI()
 
@@ -51,6 +53,41 @@ QUOTES = "\"'`“”„‟‘’‚«»"
 def clean(value: str) -> str:
     # Умные кавычки и пробелы из полей интеграции HA ломают поиск модели в конфиге
     return value.strip().strip(QUOTES).strip()
+
+SSML_TAG = re.compile(r"(<[^>]+>)")
+
+def extract_ssml(text: str):
+    # SSML может прийти в кавычках из message автоматизации: “<speak>...</speak>"
+    candidate = clean(text)
+    lowered = candidate.lower()
+    if lowered.startswith("<speak") and lowered.endswith("</speak>"):
+        return candidate
+    return None
+
+def preprocess_ssml(engine, ssml: str) -> str:
+    # engine.tts() прогоняет через spell_digits всю строку вместе с тегами (time="3s" -> "триs"),
+    # поэтому правила библиотеки применяем только к тексту между тегами
+    rules = lang_data.get(engine.language, {})
+    parts = SSML_TAG.split(ssml)
+    for i in range(0, len(parts), 2):
+        part = parts[i]
+        for old, new in rules.get('replacements', []):
+            part = part.replace(old, new)
+        for pattern, repl in rules.get('patterns', []):
+            part = re.sub(pattern, repl, part)
+        parts[i] = engine.spell_digits(part)
+    return "".join(parts)
+
+def synthesize_ssml(engine, ssml: str, output_file: str):
+    # engine.tts() всегда вызывает apply_tts(text=...); SSML модель понимает только через ssml_text=
+    audio = engine.tts_model.apply_tts(ssml_text=preprocess_ssml(engine, ssml),
+                                       speaker=engine.speaker,
+                                       sample_rate=engine.sample_rate,
+                                       put_accent=engine.put_accent,
+                                       put_yo=engine.put_yo)
+    wf = engine.init_wave_file(output_file)
+    wf.writeframes((audio * 32767).numpy().astype('int16'))
+    wf.close()
 
 @app.post("/tts")
 def generate_tts(req: TTSRequest):
@@ -79,8 +116,12 @@ def generate_tts(req: TTSRequest):
             temp_path = tmp.name
             
         print(f"Генерация: текст='{req.text}', голос={voice}")
-        tts_engine.tts(req.text, temp_path)
-        
+        ssml = extract_ssml(req.text)
+        if ssml:
+            synthesize_ssml(tts_engine, ssml, temp_path)
+        else:
+            tts_engine.tts(req.text, temp_path)
+
         if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
             raise Exception("Файл не сгенерировался (0 байт). Ошибка библиотеки Silero.")
             
