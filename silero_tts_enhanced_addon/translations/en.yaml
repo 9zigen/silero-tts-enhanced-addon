@@ -1,0 +1,4 @@
+configuration:
+  model_cache_size:
+    name: Models kept in RAM
+    description: How many Silero models stay loaded at once (about 230 MB each). Switching between cached models is instant; others are loaded from disk.

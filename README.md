@@ -1,12 +1,16 @@
 # Silero TTS Enhanced Engine - Home Assistant Add-on
 
-Local, fast, and high-quality Text-to-Speech engine for Home Assistant, based on [Silero Models](https://github.com/snakers4/silero-models) and enhanced by [daswer123's wrapper](https://github.com/daswer123/silero-tts-enhanced).
+Local, fast, and high-quality Text-to-Speech engine for Home Assistant, based on [Silero Models](https://github.com/snakers4/silero-models) and the [silero-tts wrapper by daswer123](https://github.com/daswer123/silero-tts-enhanced).
 
 ## Features
-- **Fully Local:** Works without internet after initial model download.
-- **Enhanced Text Processing:** Automatic transliteration, numbers-to-words, and pause insertion.
-- **RAM Caching:** Keeps multiple models in memory for instantaneous language/model switching.
-- **High Quality:** Uses the latest `v5_ru` models.
+- **Fully Local:** Models and Silero's model list are saved in `/data`; after the first download it works without internet.
+- **Text Preparation:** Numbers to words (Russian "1"/"2" agree with the next noun, negative numbers, long numbers digit by digit), Latin words transliterated in Russian text, long messages split into sentences.
+- **SSML:** Pauses (`<break time="3s"/>`), speed and pitch (`<prosody>`), paragraphs and sentences on v5 models.
+- **Stress and Ё:** Automatic stress and `ё` placement (switchable), plus manual stress with `+` (`зам+ок`).
+- **RAM Caching:** Keeps up to N models loaded at once (default 2, about 230 MB each; set it on the add-on Configuration tab). Other models load from the disk cache.
+- **Any Silero Model:** Models are downloaded on first use, e.g. `v5_5_ru`, `v5_ru`, `v3_en`.
+
+See the add-on documentation (DOCS.md) for details, examples and known limits.
 
 ## Installation
 1. Go to Home Assistant -> **Settings** -> **Add-ons** -> **Add-on Store**.
@@ -26,13 +30,17 @@ The models are published under the **CC BY-NC** (Non-Commercial) license. Please
 
 # Усовершенствованный движок Silero TTS — дополнение для Home Assistant
 
-Локальный, быстрый и высококачественный движок преобразования текста в речь для Home Assistant, основанный на [моделях Silero](https://github.com/snakers4/silero-models) и усовершенствованный с помощью [обёртки daswer123](https://github.com/daswer123/silero-tts-enhanced).
+Локальный, быстрый и высококачественный движок преобразования текста в речь для Home Assistant, основанный на [моделях Silero](https://github.com/snakers4/silero-models) и [обёртке silero-tts от daswer123](https://github.com/daswer123/silero-tts-enhanced).
 
 ## Особенности
-- **Полностью локальный:** Работает без интернета после первоначальной загрузки моделей.
-- **Улучшенная обработка текста:** Автоматическая транслитерация, преобразование цифр в слова и вставка пауз.
-- **Кэширование в RAM:** Хранит несколько моделей в памяти для мгновенного переключения языка/модели.
-- **Высокое качество:** Использует новейшие модели `v5_ru`.
+- **Полностью локальный:** Модели и список моделей Silero сохраняются в `/data`; после первой загрузки работает без интернета.
+- **Подготовка текста:** Числа словами (русские «один»/«два» согласуются со следующим существительным, отрицательные числа, длинные числа по цифрам), транслитерация латиницы в русском тексте, длинные сообщения делятся на предложения.
+- **SSML:** Паузы (`<break time="3s"/>`), скорость и высота голоса (`<prosody>`), абзацы и предложения на моделях v5.
+- **Ударения и Ё:** Автоматическая расстановка ударений и `ё` (отключается), а также ручное ударение через `+` (`зам+ок`).
+- **Кэширование в RAM:** Держит до N моделей загруженными одновременно (по умолчанию 2, около 230 МБ каждая; настраивается на вкладке «Конфигурация» аддона). Остальные модели подгружаются с диска.
+- **Любая модель Silero:** Модели скачиваются при первом использовании, например `v5_5_ru`, `v5_ru`, `v3_en`.
+
+Подробности, примеры и известные ограничения — в документации аддона (DOCS.md).
 
 ## Установка
 1. Перейдите в Home Assistant -> **Настройки** -> **Дополнения** -> **Магазин дополнений**.

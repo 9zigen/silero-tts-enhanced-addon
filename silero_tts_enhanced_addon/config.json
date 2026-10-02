@@ -1,6 +1,6 @@
 {
   "name": "Silero TTS Enhanced Engine",
-  "version": "1.0.10",
+  "version": "1.1.0",
   "slug": "silero_tts_engine",
   "description": "Локальный синтез речи с улучшенной обработкой текста.",
   "arch": ["amd64", "aarch64"],
@@ -9,5 +9,10 @@
   "ports": {
     "8014/tcp": 8014
   },
-  "options": {}
+  "options": {
+    "model_cache_size": 2
+  },
+  "schema": {
+    "model_cache_size": "int(1,5)"
+  }
 }

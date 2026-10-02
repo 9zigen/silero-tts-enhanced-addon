@@ -2,45 +2,76 @@
 
 A local, fast, and high-quality text-to-speech synthesizer for your smart home.
 
-This add-on is based on [Silero Models](https://github.com/snakers4/silero-models) neural network models and uses an improved text processing algorithm from [daswer123](https://github.com/daswer123/silero-tts-enhanced).
+This add-on is based on [Silero Models](https://github.com/snakers4/silero-models) neural network models and the [silero-tts](https://github.com/daswer123/silero-tts-enhanced) wrapper by [daswer123](https://github.com/daswer123), extended with its own text preparation.
 
 ## 🔥 Features
-* **Works locally:** No cloud or internet required.
-* **Fast switching:** Models are stored in RAM.
-* **Stress:** You can explicitly specify stress in complex words by placing a `+` sign before a vowel (e.g., `zam+ok`).
+* **Works locally:** No cloud. Models and Silero's model list are saved in `/data`, so after the first download the add-on also works without internet (a saved copy of the model list is used when it cannot be refreshed).
+* **RAM cache:** Keeps several models loaded at once, so switching between them is instant. The number is set on the add-on **Configuration** tab (*Models kept in RAM*, default 2, about 230 MB each). Other models load from the disk cache.
+* **Text preparation:**
+  * numbers are spoken as words; in Russian "1" and "2" agree with the next noun (`1 час`, `21 минута`, `2 минуты`), negative numbers get "минус", long numbers and codes like `007` are read digit by digit;
+  * Latin words and abbreviations in Russian text are transliterated, otherwise the model skips them (`Wi-Fi` → «вай-фай», `USB` → «ю эс би»);
+  * long messages are split into sentences automatically.
+* **SSML:** pauses, speed and pitch (see below).
+* **Stress:** You can explicitly specify stress in complex words by placing a `+` sign before a vowel (e.g., `зам+ок`).
 
 ## 🛠 Available Models and Languages
-The add-on automatically downloads any model you request from the Integration.
+The add-on downloads any model you request from the Integration on first use. An unknown model, voice or language returns an error that lists the valid values.
 Most popular:
-* **Russian (ru):** `v5_ru` (voices: aidar, baya, kseniya, xenia, random)
-* **English (en):** `v3_en` (117 voices: en_0, en_1 ... en_117)
+* **Russian (ru):** `v5_5_ru` (voices: aidar, baya, kseniya, xenia, eugene), `v5_ru`
+* **English (en):** `v3_en` (voices: en_0, en_1 ... en_117, random)
+
+## ⚙️ Auto-accent and Ё switches
+The two checkboxes in the integration settings are sent as `put_accent` and `put_yo`, and can be overridden per call in `options`.
+* **Auto-accent placement** (`put_accent`) lets the model place stress itself. Turn it off to speak without automatic stress; stress marks you set with `+` still work.
+* **Auto-placement of the letter Ё** (`put_yo`) restores `ё` in words written with `е` (`елка` → `ёлка`).
+* Ambiguous words (homographs such as `замок`, `все`/`всё`) are resolved by the model itself and are not controlled by these two switches.
+
+## 🎚 SSML
+Wrap the message in `<speak>…</speak>` (v5 models). Supported tags: `<break time="3s"/>` (also `500ms`), `<prosody rate="slow" pitch="high">`, `<p>`, `<s>`.
+Numbers and Latin words inside the text are prepared as usual; tag attributes are left untouched. An SSML message is sent to the model as a single piece, so keep it under about 1000 characters (longer ones are rejected with a clear error; plain text has no such limit).
 
 ## 💡 Automation examples
-You can change the voice and model on the fly directly from Home Assistant scripts:
+Use plain straight quotes `'` and `"`. Curly quotes `“ ”` (from word processors or chats) are not YAML quotes and end up inside the value.
 
 ```yaml
-service: tts.speak
+action: tts.speak
 target:
   entity_id: tts.silero_tts_enhanced
 data:
   media_player_entity_id: media_player.living_room
-  message: “Attention. The CPU temperature has reached 80 degrees.”
+  message: "Attention. The CPU temperature has reached 80 degrees."
   options:
-    model_id: “v5_ru”
-    voice: “xenia”
+    model_id: v5_5_ru
+    voice: xenia
     put_accent: true
+```
 
-service: tts.speak
+```yaml
+action: tts.speak
 target:
   entity_id: tts.silero_tts_enhanced
 data:
   media_player_entity_id: media_player.living_room
-  message: “Hello world, the smart home is ready.”
-  language: “en”
-  options:
-    model_id: “v3_en”
-    voice: “en_24”
+  message: '<speak>Через 3 минуты<break time="2s"/> кофе будет готов.</speak>'
 ```
+
+```yaml
+action: tts.speak
+target:
+  entity_id: tts.silero_tts_enhanced
+data:
+  media_player_entity_id: media_player.living_room
+  message: "Hello world, the smart home is ready."
+  language: en
+  options:
+    model_id: v3_en
+    voice: en_24
+```
+
+## ⚠️ Known limits
+* "1" and "2" follow the next noun in the nominative and accusative only; dates like `1 января` are read as plain numbers.
+* Latin words are transliterated letter by letter with a small dictionary of common words, so exotic names may sound approximate.
+* Languages without number words in the library (`tt`, `ba`, `xal`) read numbers in Russian.
 
 ----------------------------------------------------------
 
@@ -48,42 +79,73 @@ data:
 
 Локальный, быстрый и качественный синтезатор речи для вашего Умного дома.
 
-Этот аддон основан на нейросетевых моделях [Silero Models](https://github.com/snakers4/silero-models) и использует улучшенный алгоритм обработки текста от [daswer123's](https://github.com/daswer123/silero-tts-enhanced).
+Этот аддон основан на нейросетевых моделях [Silero Models](https://github.com/snakers4/silero-models) и обёртке [silero-tts](https://github.com/daswer123/silero-tts-enhanced) от [daswer123](https://github.com/daswer123), дополненной собственной подготовкой текста.
 
 ## 🔥 Возможности
-* **Работает локально:** Без облаков и интернета.
-* **Быстрое переключение:** Модели хранятся в ОЗУ.
+* **Работает локально:** Без облаков. Модели и список моделей Silero сохраняются в `/data`, поэтому после первой загрузки аддон работает и без интернета (если список обновить не удалось, берётся сохранённая копия).
+* **Кэш в ОЗУ:** Держит несколько моделей загруженными одновременно, переключение между ними мгновенное. Количество задаётся на вкладке **Конфигурация** аддона (*Моделей в оперативной памяти*, по умолчанию 2, около 230 МБ каждая). Остальные модели подгружаются с диска.
+* **Подготовка текста:**
+  * числа читаются словами; по-русски «один» и «два» согласуются со следующим существительным (`1 час`, `21 минута`, `2 минуты`), у отрицательных чисел появляется «минус», длинные числа и коды вроде `007` читаются по цифрам;
+  * латинские слова и аббревиатуры в русском тексте транслитерируются, иначе модель их пропускает (`Wi-Fi` → «вай-фай», `USB` → «ю эс би»);
+  * длинные сообщения автоматически делятся на предложения.
+* **SSML:** паузы, скорость и высота голоса (см. ниже).
 * **Ударения:** Вы можете явно указать ударение в сложных словах, поставив знак `+` перед гласной (например: `зам+ок`).
 
 ## 🛠 Доступные модели и языки
-Аддон автоматически скачивает любую модель, которую вы запросите из Интеграции.
+Аддон скачивает любую модель, которую вы запросите из Интеграции, при первом обращении. При неизвестной модели, голосе или языке возвращается ошибка со списком допустимых значений.
 Самые популярные:
-* **Русский (ru):** `v5_ru` (голоса: aidar, baya, kseniya, xenia, random)
-* **Английский (en):** `v3_en` (117 голосов: en_0, en_1 ... en_117)
+* **Русский (ru):** `v5_5_ru` (голоса: aidar, baya, kseniya, xenia, eugene), `v5_ru`
+* **Английский (en):** `v3_en` (голоса: en_0, en_1 ... en_117, random)
+
+## ⚙️ Переключатели автоударения и Ё
+Две галочки в настройках интеграции передаются как `put_accent` и `put_yo`, их можно переопределить для отдельного вызова в `options`.
+* **Автоматическая расстановка ударений** (`put_accent`) — модель сама ставит ударения. Выключите, чтобы говорить без автоматических ударений; ударения, заданные через `+`, продолжают работать.
+* **Автоматическая расстановка буквы Ё** (`put_yo`) — возвращает `ё` в словах, написанных через `е` (`елка` → `ёлка`).
+* Неоднозначные слова (омографы вроде `замок`, `все`/`всё`) модель разбирает сама, эти два переключателя на них не влияют.
+
+## 🎚 SSML
+Оберните сообщение в `<speak>…</speak>` (модели v5). Поддерживаются теги: `<break time="3s"/>` (также `500ms`), `<prosody rate="slow" pitch="high">`, `<p>`, `<s>`.
+Числа и латиница внутри текста обрабатываются как обычно, атрибуты тегов не затрагиваются. SSML-сообщение уходит в модель целиком, поэтому держите его до 1000 символов (более длинные отклоняются с понятной ошибкой; у обычного текста такого предела нет).
 
 ## 💡 Примеры автоматизаций
-Можено менять голос и модель прямо "на лету" из скриптов Home Assistant:
+Используйте обычные прямые кавычки `'` и `"`. Типографские кавычки `“ ”` (из текстовых редакторов и мессенджеров) не являются кавычками YAML и попадают внутрь значения.
 
 ```yaml
-service: tts.speak
+action: tts.speak
 target:
   entity_id: tts.silero_tts_enhanced
 data:
   media_player_entity_id: media_player.living_room
   message: "Внимание. Температура процессора достигла 80 градусов."
   options:
-    model_id: "v5_ru"
-    voice: "xenia"
+    model_id: v5_5_ru
+    voice: xenia
     put_accent: true
+```
 
-service: tts.speak
+```yaml
+action: tts.speak
+target:
+  entity_id: tts.silero_tts_enhanced
+data:
+  media_player_entity_id: media_player.living_room
+  message: '<speak>Через 3 минуты<break time="2s"/> кофе будет готов.</speak>'
+```
+
+```yaml
+action: tts.speak
 target:
   entity_id: tts.silero_tts_enhanced
 data:
   media_player_entity_id: media_player.living_room
   message: "Hello world, the smart home is ready."
-  language: "en"
+  language: en
   options:
-    model_id: "v3_en"
-    voice: "en_24"
+    model_id: v3_en
+    voice: en_24
 ```
+
+## ⚠️ Известные ограничения
+* «Один» и «два» согласуются со следующим словом только в именительном и винительном падежах; даты вроде `1 января` читаются обычными числами.
+* Латиница транслитерируется побуквенно с небольшим словарём частых слов, поэтому редкие названия могут звучать приблизительно.
+* Языки без числительных в библиотеке (`tt`, `ba`, `xal`) читают числа по-русски.
