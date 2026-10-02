@@ -4,10 +4,13 @@ import json
 import os
 import shutil
 import threading
+import time
 import wave
 from collections import OrderedDict
+from contextlib import asynccontextmanager
 
 import requests
+import torch
 import yaml
 from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
@@ -83,10 +86,60 @@ def read_option(name, default):
 # Одна загруженная модель занимает около 230 МБ ОЗУ
 MODEL_CACHE_SIZE = max(1, read_option("model_cache_size", 2))
 
-app = FastAPI()
-
 engines = OrderedDict()  # (model_id, language) -> SileroTTS, последний использованный в конце
 lock = threading.Lock()
+
+LAST_MODELS = os.path.join(PERSISTENT_DIR, "last_models.json")
+remembered = None
+
+
+def remember_models():
+    # Запоминаем, какие модели были в работе, чтобы после перезапуска загрузить их заранее.
+    # Пишем только при изменении списка: на SD-карте лишние записи ни к чему
+    global remembered
+    current = [list(key) for key in engines]
+    if current == remembered:
+        return
+    remembered = current
+    try:
+        with open(LAST_MODELS, "w", encoding="utf-8") as f:
+            json.dump(current, f)
+    except OSError as e:
+        print(f"Не удалось сохранить список моделей: {e}")
+
+
+def warm_up(engine):
+    # Первый вызов модели заметно медленнее следующих, поэтому делаем его заранее
+    script = textprep.lang_data.get(engine.language, {}).get("script")
+    engine.tts_model.apply_tts(text="Привет." if script == "cyrillic" else "Hello.",
+                               speaker=engine.tts_model.speakers[0],
+                               sample_rate=max(engine.get_available_sample_rates()))
+
+
+def preload_models():
+    try:
+        with open(LAST_MODELS, encoding="utf-8") as f:
+            saved = [tuple(item) for item in json.load(f)][-MODEL_CACHE_SIZE:]
+    except (OSError, ValueError, TypeError):
+        return
+    for model_id, language in saved:
+        started = time.perf_counter()
+        try:
+            with lock:
+                warm_up(get_engine(model_id, language))
+            print(f"Модель {model_id} ({language}) загружена и прогрета за {time.perf_counter() - started:.1f} с")
+        except Exception as e:
+            print(f"Не удалось заранее загрузить модель {model_id} ({language}): {e}")
+
+
+@asynccontextmanager
+async def lifespan(app):
+    # В фоне, чтобы аддон сразу начал отвечать; запрос к той же модели просто подождёт загрузки
+    threading.Thread(target=preload_models, daemon=True).start()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 class TTSRequest(BaseModel):
@@ -103,6 +156,7 @@ def get_engine(model_id: str, language: str) -> SileroTTS:
     key = (model_id, language)
     if key in engines:
         engines.move_to_end(key)
+        remember_models()
         return engines[key]
 
     available = SileroTTS.get_available_models()
@@ -119,10 +173,11 @@ def get_engine(model_id: str, language: str) -> SileroTTS:
     print(f"Загрузка модели: {model_id}")
     sample_rate = max(SileroTTS.get_available_sample_rates_static(language, model_id))
     engines[key] = SileroTTS(model_id=model_id, language=language, sample_rate=sample_rate)
+    remember_models()
     return engines[key]
 
 
-def synthesize(engine, text, voice, sample_rate, put_accent, put_yo) -> bytes:
+def synthesize(engine, text, voice, sample_rate, put_accent, put_yo):
     # Движок не меняем: голос, частота и флаги идут прямо в модель, поэтому кэш безопасно делить
     ssml = textprep.extract_ssml(text)
     if ssml:
@@ -157,12 +212,13 @@ def synthesize(engine, text, voice, sample_rate, put_accent, put_yo) -> bytes:
 
     if not frames:
         raise HTTPException(status_code=422, detail="Нечего озвучивать: модель не смогла обработать текст")
-    return buffer.getvalue()
+    return buffer.getvalue(), frames / sample_rate
 
 
 @app.get("/status")
 def status():
     return {"cache_size": MODEL_CACHE_SIZE,
+            "torch_threads": torch.get_num_threads(),
             "cached_models": [{"model_id": m, "language": l} for m, l in engines]}
 
 
@@ -186,8 +242,11 @@ def generate_tts(req: TTSRequest):
     language = textprep.normalize_language(req.language)
     voice = textprep.clean(req.voice)
     try:
+        requested = time.perf_counter()
         with lock:
+            acquired = time.perf_counter()
             engine = get_engine(model_id, language)
+            loaded = time.perf_counter()
 
             speakers = engine.tts_model.speakers
             if voice not in speakers:
@@ -200,9 +259,16 @@ def generate_tts(req: TTSRequest):
                 print(f"Частота {req.sample_rate} не поддерживается моделью {model_id}, используется {sample_rate}")
 
             print(f"Генерация: текст='{req.text}', голос={voice}")
-            audio = synthesize(engine, req.text, voice, sample_rate, req.put_accent, req.put_yo)
+            synthesis_started = time.perf_counter()
+            audio, seconds = synthesize(engine, req.text, voice, sample_rate, req.put_accent, req.put_yo)
+            finished = time.perf_counter()
 
-        print(f"Успех! Отправлено {len(audio)} байт.")
+        timing = f"синтез {finished - synthesis_started:.2f} с"
+        if loaded - acquired > 0.01:
+            timing += f", загрузка модели {loaded - acquired:.2f} с"
+        if acquired - requested > 0.05:
+            timing += f", ожидание очереди {acquired - requested:.2f} с"
+        print(f"Успех! Отправлено {len(audio) // 1024} КБ, аудио {seconds:.1f} с: {timing}.")
         return Response(content=audio, media_type="audio/wav")
 
     except HTTPException:

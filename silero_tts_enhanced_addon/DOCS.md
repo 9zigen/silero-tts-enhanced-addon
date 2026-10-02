@@ -71,6 +71,13 @@ data:
     voice: en_24
 ```
 
+## ⏱ Speed
+* Once a model is loaded, a short phrase is synthesized in a fraction of a second. On an Apple M4 Pro, measured through the container: 60 ms for a 3-second phrase, 130 ms for 7 seconds. Slower CPUs take several times longer.
+* The first request after the add-on starts used to be the slow one, because the model had to load. The add-on now remembers the models you used (`/data/silero_cache/last_models.json`) and loads them in the background at startup.
+* The sample rate (24000 vs 48000) does not change synthesis speed, only the size of the audio.
+* The add-on log shows the time of every request, for example `синтез 0.12 с`, plus `загрузка модели` or `ожидание очереди` when they apply. If speech feels slow, compare these numbers with the delay you notice: the rest comes from Home Assistant and the media player.
+* To time the add-on alone: `time curl -s -o /dev/null -X POST http://HOST:8014/tts -H 'Content-Type: application/json' -d '{"text":"Проверка скорости.","voice":"kseniya","language":"ru","model_id":"v5_5_ru"}'`
+
 ## ⚠️ Known limits
 * "1" and "2" follow the next noun in the nominative and accusative only; dates like `1 января` are read as plain numbers.
 * Latin words are transliterated letter by letter with a small dictionary of common words, so exotic names may sound approximate.
@@ -150,6 +157,13 @@ data:
     model_id: v3_en
     voice: en_24
 ```
+
+## ⏱ Скорость
+* Когда модель загружена, короткая фраза синтезируется за доли секунды. На Apple M4 Pro, измерено через контейнер: 60 мс для 3-секундной фразы, 130 мс для 7-секундной. На более слабых процессорах — в несколько раз дольше.
+* Раньше медленным был первый запрос после запуска аддона: модель нужно было загрузить. Теперь аддон запоминает использованные модели (`/data/silero_cache/last_models.json`) и при старте загружает их в фоне.
+* Частота дискретизации (24000 или 48000) не влияет на скорость синтеза, только на размер аудио.
+* В логе аддона время каждого запроса, например `синтез 0.12 с`, а при необходимости `загрузка модели` или `ожидание очереди`. Если речь кажется медленной, сравните эти цифры с задержкой, которую вы замечаете: остальное приходится на Home Assistant и медиаплеер.
+* Замерить только аддон: `time curl -s -o /dev/null -X POST http://HOST:8014/tts -H 'Content-Type: application/json' -d '{"text":"Проверка скорости.","voice":"kseniya","language":"ru","model_id":"v5_5_ru"}'`
 
 ## ⚠️ Известные ограничения
 * «Один» и «два» согласуются со следующим словом только в именительном и винительном падежах; даты вроде `1 января` читаются обычными числами.
