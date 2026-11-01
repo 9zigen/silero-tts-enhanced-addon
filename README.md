@@ -20,7 +20,7 @@ See the add-on documentation (DOCS.md) for details, examples and known limits.
 5. Click **Install**, then **Start**.
 
 ## Integration
-To use this Add-on seamlessly in Home Assistant (with UI configuration), install the companion [Silero-tts-enhanced](https://github.com/indevor/silero-tts-enhanced-hacs).
+To use this Add-on seamlessly in Home Assistant (with UI configuration), install the companion [Silero-tts-enhanced](https://github.com/9zigen/silero-tts-enhanced-hacs).
 
 ## 📝 Acknowledgements & License
 This project is an unofficial wrapper/integration. The core Text-to-Speech neural models are developed and owned by the [Silero Team](https://github.com/snakers4/silero-models).
@@ -50,7 +50,7 @@ The models are published under the **CC BY-NC** (Non-Commercial) license. Please
 5. Нажмите **Установить**, затем **Запустить**.
 
 ## Интеграция
-Чтобы беспрепятственно использовать это дополнение в Home Assistant (с настройкой интерфейса), установите сопутствующее приложение [Silero-tts-enhanced](https://github.com/indevor/silero-tts-enhanced-hacs).
+Чтобы беспрепятственно использовать это дополнение в Home Assistant (с настройкой интерфейса), установите сопутствующее приложение [Silero-tts-enhanced](https://github.com/9zigen/silero-tts-enhanced-hacs).
 
 ## 📝 Благодарности и лицензия
 Этот проект является неофициальной оболочкой/интеграцией. Основные нейронные модели преобразования текста в речь разработаны и принадлежат [команде Silero](https://github.com/snakers4/silero-models).
